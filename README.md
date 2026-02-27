@@ -1,108 +1,162 @@
 # Seleda Finance
 
-Seleda Finance is a personal finance MVP built with Flutter using strict Clean Architecture boundaries.
+Personal finance MVP for tracking income and expenses, built with Flutter using strict Clean Architecture boundaries. Seleda Finance helps users manage their daily finances with an intuitive, offline-first mobile experience.
 
 ## Features
-- Add income and expense transactions with optional receipt attachments
-- Dashboard with running balance and recent entries
-- Offline-first with local Drift (SQLite) persistence
-- Voice-to-text prefill for transaction forms
-- Riverpod state management and Material 3 UI
+
+- **Transaction Management** -- Add, edit, and delete income and expense entries with category tagging
+- **Dashboard** -- At-a-glance running balance, recent transactions, and summary cards
+- **Reports & Charts** -- Time-range filtering (week/month/year) with Syncfusion line charts and category breakdowns
+- **Voice Input** -- Speech-to-text prefill for quick transaction entry via microphone
+- **Receipt Capture** -- Attach photos from camera or gallery to any transaction
+- **Dark Mode** -- System-aware and manual dark/light theme toggle
+- **Offline-First** -- All data persisted locally with Drift (SQLite); no internet required
+
+## Tech Stack
+
+| Layer        | Technology                        |
+|--------------|-----------------------------------|
+| Framework    | Flutter 3.16+, Dart 3.2+         |
+| State Mgmt   | Riverpod 2.x                     |
+| Routing      | GoRouter 16.x                    |
+| Database     | Drift (SQLite) with code gen      |
+| Charts       | Syncfusion Flutter Charts         |
+| UI           | Material 3 Design System          |
+| Voice        | speech_to_text                    |
+| Image        | image_picker                      |
+
+## Architecture Overview
+
+The project follows **Clean Architecture** with five clearly separated layers. Dependencies point inward -- outer layers depend on inner layers, never the reverse.
+
+```
++------------------------------------------------------------------+
+|  External (Platform APIs: Camera, Microphone, File System)       |
++------------------------------------------------------------------+
+|  Infrastructure (Drift DB, DAOs, Repository Implementations)     |
++------------------------------------------------------------------+
+|  Application (Use Cases, DTOs, Business Logic Orchestration)     |
++------------------------------------------------------------------+
+|  Domain (Entities, Value Objects, Repository Contracts)           |
++------------------------------------------------------------------+
+|  Presentation (Pages, Widgets, Controllers / Riverpod Providers) |
++------------------------------------------------------------------+
+```
+
+- **Domain** -- Pure Dart entities (`Transaction`, `Attachment`), value objects (`Money`, `TransactionType`, `DateRange`), and repository interfaces. No Flutter imports.
+- **Application** -- Use cases (`AddTransaction`, `DeleteTransaction`, `UpdateTransaction`, `WatchTransactions`, `ComputeBalance`) and DTOs that orchestrate domain logic.
+- **Infrastructure** -- Drift database, DAOs, and concrete repository implementations that fulfill domain contracts.
+- **Presentation** -- Flutter pages, widgets, and Riverpod controllers/providers that drive the UI.
+- **External** -- Thin adapters wrapping platform capabilities (camera via `image_picker`, microphone via `speech_to_text`).
+
+## Project Structure
+
+```
+lib/
+  main.dart                         # App entry point
+  app/
+    colors.dart                     # Custom color palette
+    di.dart                         # Dependency injection (Riverpod providers)
+    router.dart                     # GoRouter route definitions (ShellRoute + bottom nav)
+    theme.dart                      # Material 3 light/dark theme data
+    theme_mode_provider.dart        # ThemeModeNotifier (Riverpod)
+    widgets/
+      app_bottom_navigation.dart    # Bottom navigation bar
+      app_header.dart               # Shared app header
+      expandable_fab.dart           # Expandable floating action button
+  core/
+    result.dart                     # Result<T> type (Success / Failure)
+    error/
+      failure.dart                  # Failure base class
+  features/
+    transactions/
+      domain/
+        entities/                   # Transaction, Attachment
+        value_objects/              # Money, TransactionType, DateRange
+        repositories/               # TransactionRepository (abstract)
+      application/
+        dto/                        # TransactionInputDto
+        usecases/                   # AddTransaction, DeleteTransaction, UpdateTransaction,
+                                    #   WatchTransactions, ComputeBalance
+      infrastructure/
+        data_sources/
+          drift/                    # AppDatabase, TransactionDao (+generated files)
+        repositories/               # TransactionRepositoryImpl, transaction seeds
+      presentation/
+        controllers/                # Riverpod controllers (add/edit, balance, list)
+        pages/                      # Dashboard, Transactions, AddTransaction, Report,
+                                    #   Settings, Account, Search, CategorySummary, Splash
+        widgets/                    # BalanceSummaryCard, TransactionListItem
+        style.dart                  # Presentation-layer style constants
+      external/
+        image/                      # ImagePickerAdapter
+        voice/                      # SttAdapter (speech-to-text)
+  shared/
+    formatters/
+      money_formatter.dart          # Currency display formatting
+    utils/
+      voice_parser.dart             # Parse voice input into transaction fields
+```
 
 ## Getting Started
 
 ### Prerequisites
-- [Flutter](https://flutter.dev/docs/get-started/install) (stable, Dart 3.x)
-- Android/iOS tooling for your target platform
 
-### Install dependencies
+- **Flutter SDK** 3.16 or higher (stable channel)
+- Android Studio / Xcode for platform tooling
+- A physical device or emulator/simulator
+
+### Setup
+
 ```bash
+# 1. Clone the repository
+git clone https://github.com/baakal/seleda_mobile.git
+cd seleda_mobile
+
+# 2. Install dependencies
 flutter pub get
-```
 
-### Generate Drift database code
-```bash
+# 3. Run Drift code generation
 dart run build_runner build --delete-conflicting-outputs
-```
 
-### Run the app
-```bash
+# 4. Launch the app
 flutter run
 ```
 
-### Run tests
+### Platform Permissions
+
+The app uses the camera, photo library, and microphone. Make sure the following permissions are configured:
+
+- **Android** -- Update `android/app/src/main/AndroidManifest.xml` with camera, storage, and microphone permissions.
+- **iOS** -- Add `NSCameraUsageDescription`, `NSPhotoLibraryAddUsageDescription`, and `NSMicrophoneUsageDescription` to `Info.plist`.
+
+If permissions are denied at runtime, the voice and image features gracefully degrade.
+
+### Running Tests
+
 ```bash
 flutter test
 ```
 
-## Project Structure
-```
-lib/
-  app/              # router, theme, dependency injection
-  core/             # cross-cutting utilities (Result, Failure)
-  features/
-    transactions/   # feature modules broken into presentation, application, domain, infrastructure, external
-  shared/           # shared widgets/formatters
+### Re-running Code Generation
+
+Whenever you modify Drift table definitions or annotated classes, regenerate with:
+
+```bash
+dart run build_runner build --delete-conflicting-outputs
 ```
 
-## Code Generation
-Drift uses build_runner to generate SQL bindings. Re-run `dart run build_runner build --delete-conflicting-outputs` whenever you modify Drift table definitions.
+## Roadmap / Planned Features
 
-## Permissions
-- **Android**: update `android/app/src/main/AndroidManifest.xml` with camera, storage, and microphone permissions.
-- **iOS**: add `NSCameraUsageDescription`, `NSPhotoLibraryAddUsageDescription`, and `NSMicrophoneUsageDescription` to `Info.plist`.
+- **Localization** -- Multi-language support for Amharic, Tigrigna, and Oromiffa using ARB / intl
+- **Authentication & Cloud Sync** -- User accounts with remote backup and cross-device sync
+- **Recurring Transactions** -- Scheduled entries (daily, weekly, monthly) with auto-creation
+- **Data Export** -- Export transactions to CSV / Excel for external use
+- **Advanced Reports** -- Stacked bar charts, pie charts, and category breakdowns
+- **Transaction Search** -- Full-text search with suggestion UI and debounced queries
+- **Budget Tracking** -- Set monthly budgets per category with alerts
+- **Persisted Preferences** -- Save theme and language choices locally
 
-If permissions are denied, the voice and image features gracefully degrade.
+## License
 
-## Debug Seed Data
-`AppDatabase` seeds three sample transactions the first time it is opened in debug builds to help during development. Remove or adjust this as needed.
-
-## Scripts
-Common tasks:
-- `flutter pub get`
-- `dart run build_runner build --delete-conflicting-outputs`
-- `flutter test`
-- `flutter run`
-
-## Troubleshooting
-- If Drift code generation fails, ensure no editor is locking files and rerun build_runner.
-- For voice-to-text to work on simulators, ensure microphone access is enabled.
-
-## UI Redesign (Prototype Integration)
-
-The folder `seleda-flutter-restructure/` contained an earlier UI prototype (GetX-based) with:
-- Splash screen
-- Bottom navigation (Home, Category, Search, Excel, Settings)
-- Reports / Charts page
-- Settings & Account pages with dark mode toggle
-
-This repository now integrates modern equivalents using Riverpod + GoRouter:
-
-Implemented additions:
-1. ShellRoute + `NavigationBar` bottom navigation (Home, Transactions, Reports, Settings)
-2. `ReportPage` with basic time–range filtering (week/month/year) and line chart (Syncfusion)
-3. `SettingsPage` with dark mode toggle (Riverpod `themeModeProvider`) and account stub
-4. `AccountPage` stub with language chip placeholders
-5. `SplashPage` (initial route) that transitions to dashboard
-6. Theme mode state via `ThemeModeNotifier`
-
-New dependencies (run `flutter pub get`):
-- syncfusion_flutter_charts
-- flutter_spinkit
-- dropdown_button2 (reserved for future enhanced dropdown UX)
-
-Planned / Deferred:
-- Search integration (transaction search + suggestion UI)
-- Localization (Amharic, Tigrigna, Oromiffa) using ARB / intl
-- Export to Excel (prototype icon placeholder only)
-- Advanced report visuals (stacked bars, category breakdown, pie chart)
-- Authentication & real user profile
-
-### Next Steps Suggested
-- Add repository layer aggregations for performance (pre-compute weekly/monthly sums)
-- Introduce a `SearchController` with debounced query stream
-- Add `intl` localization setup and move hard-coded strings into messages
-- Write widget tests for new pages (report filtering, theme toggle persistence)
-- Persist theme preference locally (e.g., `SharedPreferences` / `Hive`)
-
-
+This project is proprietary. All rights reserved.
